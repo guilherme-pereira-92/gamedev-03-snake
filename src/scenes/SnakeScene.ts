@@ -3,6 +3,7 @@ import { COLOR_HEX, TEXT_PRESETS } from "../theme";
 import { drawDiagonalScanlines, createPulsingDot, addCornerLabel } from "../ui";
 import { takeScreenshot } from "../screenshot";
 import { playTone } from "../audio";
+import { isTouchDevice, onSwipe, onTap } from "../input";
 import {
   CAMPAIGN_PHASE_KEY,
   highscoreKey,
@@ -144,6 +145,24 @@ export class SnakeScene extends Phaser.Scene {
 
     this.refreshStatus();
     this.showStartScreen();
+
+    // Touch: swipe muda direção. Tap reinicia / lança.
+    onSwipe(this, (dir) => {
+      if (this.state !== "playing") return;
+      if (dir === "up") this.tryTurn(DIR_UP);
+      else if (dir === "down") this.tryTurn(DIR_DOWN);
+      else if (dir === "left") this.tryTurn(DIR_LEFT);
+      else if (dir === "right") this.tryTurn(DIR_RIGHT);
+    });
+    onTap(this, () => {
+      if (this.state === "start") this.startGame();
+      else if (this.state === "gameover") this.startGame();
+      else if (this.state === "phasecleared") {
+        this.scene.start("snake", { mode: "campaign", phase: this.phase + 1 });
+      } else if (this.state === "campaigncomplete") {
+        this.scene.start("menu");
+      }
+    });
   }
 
   update(time: number, delta: number) {
@@ -185,7 +204,9 @@ export class SnakeScene extends Phaser.Scene {
       .setOrigin(1, 0);
 
     this.add.text(22, HEIGHT - 22, this.bottomLeftChrome(), TEXT_PRESETS.hint).setOrigin(0, 1);
-    this.add.text(WIDTH - 22, HEIGHT - 22, "ESC MENU · P PAUSAR · K SCREENSHOT", TEXT_PRESETS.hint).setOrigin(1, 1);
+    this.add.text(WIDTH - 22, HEIGHT - 22, isTouchDevice()
+      ? "DESLIZE PRA MUDAR DIREÇÃO"
+      : "ESC MENU · P PAUSAR · K SCREENSHOT", TEXT_PRESETS.hint).setOrigin(1, 1);
   }
 
   private bottomLeftChrome(): string {
@@ -242,7 +263,9 @@ export class SnakeScene extends Phaser.Scene {
       this.overlayTitle.setText("SNAKE");
       this.overlaySubtitle.setText(`clássico · ${this.difficulty.toUpperCase()}  ·  high ${this.highScore}`);
     }
-    this.overlayHint.setText("ESPAÇO COMEÇAR  ·  ESC MENU");
+    this.overlayHint.setText(isTouchDevice()
+      ? "TOQUE PRA COMEÇAR  ·  DESLIZE PRA MUDAR DIREÇÃO"
+      : "ESPAÇO COMEÇAR  ·  ESC MENU");
   }
 
   private phaseDescription(phase: number): string {
