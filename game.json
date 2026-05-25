@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "number": 3,
+  "slug": "03-snake",
+  "title": "Snake",
+  "shortDescription": "Snake com campanha de 5 fases (wrap, obstáculos, aceleração, comida dourada) e dificuldades.",
+  "stack": ["TypeScript", "Phaser 3", "Vite"],
+  "concepts": [
+    "fixed timestep (accumulator + while loop)",
+    "lógica em grid (40×30 células)",
+    "snake como array com unshift/pop",
+    "anti-reversal de direção",
+    "input buffering (currentDir vs nextDir)",
+    "spawn validation com Set (rejection sampling)",
+    "Graphics layer (vs múltiplos GameObjects)",
+    "campanha 5 fases + 3 dificuldades + high score persistente"
+  ],
+  "publishedAt": "2026-05-24",
+  "live": "https://guilherme-pereira-92.github.io/gamedev-03-snake/",
+  "repo": "https://github.com/guilherme-pereira-92/gamedev-03-snake",
+  "cover": "screenshots/cover.png",
+  "playable": true,
+  "mobile": "letterbox"
+}
