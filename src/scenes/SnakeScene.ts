@@ -1,6 +1,6 @@
 import Phaser from "phaser";
 import { COLOR_HEX, TEXT_PRESETS } from "../theme";
-import { drawDiagonalScanlines, createPulsingDot, addCornerLabel } from "../ui";
+import { drawDiagonalScanlines, createPulsingDot, addCornerLabel, setupResponsiveCameras } from "../ui";
 import { takeScreenshot } from "../screenshot";
 import { playTone } from "../audio";
 import { isTouchDevice, onSwipe, onTap } from "../input";
@@ -86,6 +86,11 @@ export class SnakeScene extends Phaser.Scene {
   private foodGraphics!: Phaser.GameObjects.Graphics;
   private obstaclesGraphics!: Phaser.GameObjects.Graphics;
 
+  // Dual-camera helpers — set in create()
+  private _registerWorld!: (obj: Phaser.GameObjects.GameObject) => void;
+  private _registerUi!: (obj: Phaser.GameObjects.GameObject) => void;
+  private _onCamResize!: (cb: () => void) => void;
+
   private statusLabel!: Phaser.GameObjects.Text;
   private targetLabel!: Phaser.GameObjects.Text;
   private overlayBg!: Phaser.GameObjects.Rectangle;
@@ -115,13 +120,22 @@ export class SnakeScene extends Phaser.Scene {
   }
 
   create() {
-    this.add.rectangle(WIDTH / 2, HEIGHT / 2, WIDTH, HEIGHT, COLOR_HEX.bg);
-    drawDiagonalScanlines(this, WIDTH, HEIGHT, 20, 0.035);
+    // Dual camera: gameplay no main cam (800x600 com zoom fit), chrome no UI cam (viewport coords)
+    const { registerWorld, registerUi, onResize: onCamResize } = setupResponsiveCameras(this, WIDTH, HEIGHT);
+    this._registerWorld = registerWorld;
+    this._registerUi = registerUi;
+    this._onCamResize = onCamResize;
+
+    // World: bg + scanlines + gameplay (todos em 800x600 logical)
+    const bg = this.add.rectangle(WIDTH / 2, HEIGHT / 2, WIDTH, HEIGHT, COLOR_HEX.bg);
+    registerWorld(bg);
+    const scanlines = drawDiagonalScanlines(this, WIDTH, HEIGHT, 20, 0.035);
+    registerWorld(scanlines);
     this.drawGridLines();
 
-    this.obstaclesGraphics = this.add.graphics();
-    this.snakeGraphics = this.add.graphics();
-    this.foodGraphics = this.add.graphics();
+    this.obstaclesGraphics = this.add.graphics(); registerWorld(this.obstaclesGraphics);
+    this.snakeGraphics = this.add.graphics(); registerWorld(this.snakeGraphics);
+    this.foodGraphics = this.add.graphics(); registerWorld(this.foodGraphics);
 
     this.drawChrome();
     this.drawOverlay();
@@ -193,20 +207,47 @@ export class SnakeScene extends Phaser.Scene {
 
   // ---------- chrome ----------
 
-  private drawChrome() {
-    addCornerLabel(this, 22, 22, "/ 03", "SNAKE", false);
-    createPulsingDot(this, WIDTH - 22 - 4, 22 + 6, 4, COLOR_HEX.accent);
-    this.statusLabel = this.add
-      .text(WIDTH - 38, 22, "", TEXT_PRESETS.monoLabel)
-      .setOrigin(1, 0);
-    this.targetLabel = this.add
-      .text(WIDTH - 22, 44, "", TEXT_PRESETS.hint)
-      .setOrigin(1, 0);
+  private chromeBottomLeft!: Phaser.GameObjects.Text;
+  private chromeBottomRight!: Phaser.GameObjects.Text;
+  private chromeDot!: { dot: Phaser.GameObjects.Arc; glow: Phaser.GameObjects.Arc };
 
-    this.add.text(22, HEIGHT - 22, this.bottomLeftChrome(), TEXT_PRESETS.hint).setOrigin(0, 1);
-    this.add.text(WIDTH - 22, HEIGHT - 22, isTouchDevice()
+  private drawChrome() {
+    const W = this.scale.width;
+    const H = this.scale.height;
+    const labels = addCornerLabel(this, 22, 22, "/ 03", "SNAKE", false);
+    if (labels.accentText) this._registerUi(labels.accentText);
+    this._registerUi(labels.mainText);
+
+    this.chromeDot = createPulsingDot(this, W - 22 - 4, 22 + 6, 4, COLOR_HEX.accent);
+    this._registerUi(this.chromeDot.dot);
+    this._registerUi(this.chromeDot.glow);
+
+    this.statusLabel = this.add.text(W - 38, 22, "", TEXT_PRESETS.monoLabel).setOrigin(1, 0);
+    this._registerUi(this.statusLabel);
+    this.targetLabel = this.add.text(W - 22, 44, "", TEXT_PRESETS.hint).setOrigin(1, 0);
+    this._registerUi(this.targetLabel);
+
+    this.chromeBottomLeft = this.add.text(22, H - 22, this.bottomLeftChrome(), TEXT_PRESETS.hint).setOrigin(0, 1);
+    this._registerUi(this.chromeBottomLeft);
+    this.chromeBottomRight = this.add.text(W - 22, H - 22, isTouchDevice()
       ? "DESLIZE PRA MUDAR DIREÇÃO"
       : "ESC MENU · P PAUSAR · K SCREENSHOT", TEXT_PRESETS.hint).setOrigin(1, 1);
+    this._registerUi(this.chromeBottomRight);
+
+    this._onCamResize(() => {
+      const nW = this.scale.width;
+      const nH = this.scale.height;
+      this.chromeDot.dot.setPosition(nW - 22 - 4, 22 + 6);
+      this.chromeDot.glow.setPosition(nW - 22 - 4, 22 + 6);
+      this.statusLabel.setPosition(nW - 38, 22);
+      this.targetLabel.setPosition(nW - 22, 44);
+      this.chromeBottomLeft.setPosition(22, nH - 22);
+      this.chromeBottomRight.setPosition(nW - 22, nH - 22);
+      this.overlayBg.setPosition(nW / 2, nH / 2).setSize(nW, nH);
+      this.overlayTitle.setPosition(nW / 2, nH / 2 - 80);
+      this.overlaySubtitle.setPosition(nW / 2, nH / 2);
+      this.overlayHint.setPosition(nW / 2, nH / 2 + 56);
+    });
   }
 
   private bottomLeftChrome(): string {
@@ -215,17 +256,16 @@ export class SnakeScene extends Phaser.Scene {
   }
 
   private drawOverlay() {
-    this.overlayBg = this.add.rectangle(WIDTH / 2, HEIGHT / 2, WIDTH, HEIGHT, COLOR_HEX.bg, 0.82);
-    this.overlayTitle = this.add
-      .text(WIDTH / 2, HEIGHT / 2 - 80, "", TEXT_PRESETS.heroOutline)
-      .setOrigin(0.5)
-      .setFontSize("88px");
-    this.overlaySubtitle = this.add
-      .text(WIDTH / 2, HEIGHT / 2, "", TEXT_PRESETS.body)
-      .setOrigin(0.5);
-    this.overlayHint = this.add
-      .text(WIDTH / 2, HEIGHT / 2 + 56, "", TEXT_PRESETS.hint)
-      .setOrigin(0.5);
+    const W = this.scale.width;
+    const H = this.scale.height;
+    this.overlayBg = this.add.rectangle(W / 2, H / 2, W, H, COLOR_HEX.bg, 0.82);
+    this._registerUi(this.overlayBg);
+    this.overlayTitle = this.add.text(W / 2, H / 2 - 80, "", TEXT_PRESETS.heroOutline).setOrigin(0.5).setFontSize("88px");
+    this._registerUi(this.overlayTitle);
+    this.overlaySubtitle = this.add.text(W / 2, H / 2, "", TEXT_PRESETS.body).setOrigin(0.5);
+    this._registerUi(this.overlaySubtitle);
+    this.overlayHint = this.add.text(W / 2, H / 2 + 56, "", TEXT_PRESETS.hint).setOrigin(0.5);
+    this._registerUi(this.overlayHint);
   }
 
   private hideOverlay() {
@@ -447,6 +487,7 @@ export class SnakeScene extends Phaser.Scene {
 
   private drawGridLines() {
     const g = this.add.graphics();
+    this._registerWorld(g);
     g.lineStyle(1, COLOR_HEX.border, 0.4);
     for (let x = 0; x <= COLS; x++) g.lineBetween(x * CELL, 0, x * CELL, HEIGHT);
     for (let y = 0; y <= ROWS; y++) g.lineBetween(0, y * CELL, WIDTH, y * CELL);

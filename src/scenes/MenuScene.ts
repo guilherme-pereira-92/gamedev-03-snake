@@ -5,8 +5,6 @@ import { takeScreenshot } from "../screenshot";
 import { unlockAudio } from "../audio";
 import { isTouchDevice } from "../input";
 
-const WIDTH = 800;
-const HEIGHT = 600;
 
 export type GameMode = "classic" | "campaign";
 export type Difficulty = "calm" | "normal" | "fast";
@@ -46,45 +44,45 @@ export class MenuScene extends Phaser.Scene {
   create() {
     this.campaignPhase = this.loadCampaignPhase();
 
-    this.add.rectangle(WIDTH / 2, HEIGHT / 2, WIDTH, HEIGHT, COLOR_HEX.bg);
-    drawDiagonalScanlines(this, WIDTH, HEIGHT, 15, 0.045);
+    this.add.rectangle(this.scale.width / 2, this.scale.height / 2, this.scale.width, this.scale.height, COLOR_HEX.bg);
+    drawDiagonalScanlines(this, this.scale.width, this.scale.height, 15, 0.045);
 
     addCornerLabel(this, 22, 22, "/ 03", "SNAKE", false);
-    createPulsingDot(this, WIDTH - 22 - 4, 22 + 6, 4, COLOR_HEX.accent);
+    createPulsingDot(this, this.scale.width - 22 - 4, 22 + 6, 4, COLOR_HEX.accent);
     this.add
-      .text(WIDTH - 38, 22, `CAMPANHA · FASE ${String(this.campaignPhase).padStart(2, "0")} / 05`, TEXT_PRESETS.monoLabel)
+      .text(this.scale.width - 38, 22, `CAMPANHA · FASE ${String(this.campaignPhase).padStart(2, "0")} / 05`, TEXT_PRESETS.monoLabel)
       .setOrigin(1, 0);
 
-    this.add.text(22, HEIGHT - 22, "GAMEDEV.03", TEXT_PRESETS.hint).setOrigin(0, 1);
-    this.add.text(WIDTH - 22, HEIGHT - 22, "BRICOLAGE · GEIST", TEXT_PRESETS.hint).setOrigin(1, 1);
+    this.add.text(22, this.scale.height - 22, "GAMEDEV.03", TEXT_PRESETS.hint).setOrigin(0, 1);
+    this.add.text(this.scale.width - 22, this.scale.height - 22, "BRICOLAGE · GEIST", TEXT_PRESETS.hint).setOrigin(1, 1);
 
     this.add
-      .text(WIDTH / 2, 118, "/ JORNADA GAMEDEV", { ...TEXT_PRESETS.monoLabel, color: COLORS.muted })
+      .text(this.scale.width / 2, 118, "/ JORNADA GAMEDEV", { ...TEXT_PRESETS.monoLabel, color: COLORS.muted })
       .setOrigin(0.5);
 
     this.add
-      .text(WIDTH / 2, 178, "SNAKE", TEXT_PRESETS.heroOutline)
+      .text(this.scale.width / 2, 178, "SNAKE", TEXT_PRESETS.heroOutline)
       .setOrigin(0.5)
       .setFontSize("96px");
 
     this.add
-      .text(WIDTH / 2, 240, "memorize o grid · não morda o próprio rabo", TEXT_PRESETS.body)
+      .text(this.scale.width / 2, 240, "memorize o grid · não morda o próprio rabo", TEXT_PRESETS.body)
       .setOrigin(0.5);
 
     OPTIONS.forEach((opt, i) => {
       const y = 320 + i * 56;
       const labelText = this.add
-        .text(WIDTH / 2, y, opt.label, { ...TEXT_PRESETS.bodyFg, fontSize: "20px" })
+        .text(this.scale.width / 2, y, opt.label, { ...TEXT_PRESETS.bodyFg, fontSize: "20px" })
         .setOrigin(0.5);
       this.optionTexts.push(labelText);
 
       const descText = this.add
-        .text(WIDTH / 2, y + 20, opt.description, { ...TEXT_PRESETS.hint, color: COLORS.muted })
+        .text(this.scale.width / 2, y + 20, opt.description, { ...TEXT_PRESETS.hint, color: COLORS.muted })
         .setOrigin(0.5);
       this.optionDescTexts.push(descText);
 
       // Mobile: tap em cada opção seleciona e inicia.
-      const hitArea = this.add.rectangle(WIDTH / 2, y + 10, 600, 50, 0, 0).setInteractive({ useHandCursor: true });
+      const hitArea = this.add.rectangle(this.scale.width / 2, y + 10, 600, 50, 0, 0).setInteractive({ useHandCursor: true });
       hitArea.on("pointerover", () => {
         this.selectedIndex = i;
         this.refreshHighlight();
@@ -97,7 +95,7 @@ export class MenuScene extends Phaser.Scene {
     });
 
     this.add
-      .text(WIDTH / 2, HEIGHT - 56, isTouchDevice()
+      .text(this.scale.width / 2, this.scale.height - 56, isTouchDevice()
         ? "TOQUE UMA OPÇÃO PRA JOGAR"
         : "↑ ↓ ESCOLHER    ·    ENTER JOGAR    ·    K SCREENSHOT", TEXT_PRESETS.hint)
       .setOrigin(0.5);
