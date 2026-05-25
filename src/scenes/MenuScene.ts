@@ -1,6 +1,6 @@
 import Phaser from "phaser";
 import { COLORS, COLOR_HEX, TEXT_PRESETS } from "../theme";
-import { drawDiagonalScanlines, createPulsingDot, addCornerLabel } from "../ui";
+import { drawDiagonalScanlines, createPulsingDot, addCornerLabel, getResponsiveTextSize } from "../ui";
 import { takeScreenshot } from "../screenshot";
 import { unlockAudio } from "../audio";
 import { isTouchDevice } from "../input";
@@ -63,7 +63,7 @@ export class MenuScene extends Phaser.Scene {
     this.add
       .text(this.scale.width / 2, 178, "SNAKE", TEXT_PRESETS.heroOutline)
       .setOrigin(0.5)
-      .setFontSize("96px");
+      .setFontSize(getResponsiveTextSize(this, "hero"));
 
     this.add
       .text(this.scale.width / 2, 240, "memorize o grid · não morda o próprio rabo", TEXT_PRESETS.body)

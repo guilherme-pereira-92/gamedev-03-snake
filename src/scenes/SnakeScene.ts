@@ -1,6 +1,6 @@
 import Phaser from "phaser";
 import { COLOR_HEX, TEXT_PRESETS } from "../theme";
-import { drawDiagonalScanlines, createPulsingDot, addCornerLabel, setupResponsiveCameras } from "../ui";
+import { drawDiagonalScanlines, createPulsingDot, addCornerLabel, setupResponsiveCameras, getResponsiveTextSize } from "../ui";
 import { takeScreenshot } from "../screenshot";
 import { playTone } from "../audio";
 import { isTouchDevice, onSwipe, onTap } from "../input";
@@ -85,6 +85,7 @@ export class SnakeScene extends Phaser.Scene {
   private snakeGraphics!: Phaser.GameObjects.Graphics;
   private foodGraphics!: Phaser.GameObjects.Graphics;
   private obstaclesGraphics!: Phaser.GameObjects.Graphics;
+  private gridGraphics!: Phaser.GameObjects.Graphics;
 
   // Dual-camera helpers — set in create()
   private _registerWorld!: (obj: Phaser.GameObjects.GameObject) => void;
@@ -244,9 +245,10 @@ export class SnakeScene extends Phaser.Scene {
       this.chromeBottomLeft.setPosition(22, nH - 22);
       this.chromeBottomRight.setPosition(nW - 22, nH - 22);
       this.overlayBg.setPosition(nW / 2, nH / 2).setSize(nW, nH);
-      this.overlayTitle.setPosition(nW / 2, nH / 2 - 80);
+      this.overlayTitle.setPosition(nW / 2, nH / 2 - 80).setFontSize(getResponsiveTextSize(this, "hero"));
       this.overlaySubtitle.setPosition(nW / 2, nH / 2);
       this.overlayHint.setPosition(nW / 2, nH / 2 + 56);
+      this.redrawGrid();
     });
   }
 
@@ -260,7 +262,7 @@ export class SnakeScene extends Phaser.Scene {
     const H = this.scale.height;
     this.overlayBg = this.add.rectangle(W / 2, H / 2, W, H, COLOR_HEX.bg, 0.82);
     this._registerUi(this.overlayBg);
-    this.overlayTitle = this.add.text(W / 2, H / 2 - 80, "", TEXT_PRESETS.heroOutline).setOrigin(0.5).setFontSize("88px");
+    this.overlayTitle = this.add.text(W / 2, H / 2 - 80, "", TEXT_PRESETS.heroOutline).setOrigin(0.5).setFontSize(getResponsiveTextSize(this, "hero"));
     this._registerUi(this.overlayTitle);
     this.overlaySubtitle = this.add.text(W / 2, H / 2, "", TEXT_PRESETS.body).setOrigin(0.5);
     this._registerUi(this.overlaySubtitle);
@@ -486,13 +488,20 @@ export class SnakeScene extends Phaser.Scene {
   // ---------- desenho ----------
 
   private drawGridLines() {
-    const g = this.add.graphics();
-    this._registerWorld(g);
+    if (!this.gridGraphics) {
+      this.gridGraphics = this.add.graphics();
+      this._registerWorld(this.gridGraphics);
+    }
+    this.redrawGrid();
+    this.drawObstaclesOnce();
+  }
+
+  private redrawGrid() {
+    const g = this.gridGraphics;
+    g.clear();
     g.lineStyle(1, COLOR_HEX.border, 0.4);
     for (let x = 0; x <= COLS; x++) g.lineBetween(x * CELL, 0, x * CELL, HEIGHT);
     for (let y = 0; y <= ROWS; y++) g.lineBetween(0, y * CELL, WIDTH, y * CELL);
-
-    this.drawObstaclesOnce();
   }
 
   private drawObstaclesOnce() {
